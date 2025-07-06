@@ -13,7 +13,7 @@
 | Atribut         | Keterangan            |
 | --------------- | --------------------- |
 | **Nama**        | Dhiyaulhaq Al Maududi |
-| **NIM**         | 312310463             |
+| **NIM**         | 312310508             |
 | **Kelas**       | TI.23.A.5             |
 | **Mata Kuliah** | Pemrograman Website 2 |
 
