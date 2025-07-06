@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Frontend VueJS</title>
+
+  <!-- Vue Development (ganti ke .prod.js saat production) -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <!-- Axios untuk komunikasi API -->
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+  <!-- Style -->
+  <link rel="stylesheet" href="assets/css/style.css" />
+
+  <!-- Hindari error favicon -->
+  <link rel="icon" href="data:,">
+</head>
+<body>
+  <div id="app">
+    <h1>Daftar Artikel</h1>
+
+    <!-- Loading State -->
+    <div v-if="isLoading" class="loading">
+      <p>⏳ Memuat data...</p>
+      <small>Mencoba koneksi ke server CodeIgniter 4...</small>
+    </div>
+
+    <!-- Error State -->
+    <div v-if="errorMessage && !isLoading" class="error-message">
+      <h3>❌ Gagal memuat data</h3>
+      <pre>{{ errorMessage }}</pre>
+      <button @click="loadData()" class="retry-btn">🔄 Coba Lagi</button>
+      <div class="troubleshoot">
+        <h4>Troubleshooting:</h4>
+        <ol>
+          <li>Pastikan XAMPP Apache sudah berjalan</li>
+          <li>Buka <a href="http://localhost/ci4/public" target="_blank">http://localhost/ci4/public</a> di browser</li>
+          <li>Pastikan database 'sukses' sudah dibuat</li>
+          <li>Cek apakah tabel 'artikel' sudah ada</li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-if="!isLoading && !errorMessage">
+      <button id="btn-tambah" @click="tambah">Tambah Artikel</button>
+      <button id="btn-kategori" @click="showKategoriModal" style="margin-left: 10px; background-color: #28a745; border-color: #28a745;">Kelola Kategori</button>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal" v-if="showForm">
+      <div class="modal-content">
+        <span class="close" @click="closeModal">&times;</span>
+        <form @submit.prevent="saveData" enctype="multipart/form-data">
+          <h3>{{ formTitle }}</h3>
+          <div><input type="text" v-model="formData.judul" placeholder="Judul" required /></div>
+          <div><textarea v-model="formData.isi" rows="6" placeholder="Isi Artikel" required></textarea></div>
+
+          <!-- Kategori Selection -->
+          <div class="form-group">
+            <label for="kategori">Kategori:</label>
+            <select v-model="formData.id_kategori" id="kategori">
+              <option value="">-- Pilih Kategori --</option>
+              <option v-for="kat in kategori" :key="kat.id_kategori" :value="kat.id_kategori">
+                {{ kat.nama_kategori }}
+              </option>
+            </select>
+          </div>
+
+          <!-- Upload Gambar -->
+          <div class="form-group">
+            <label for="gambar">Gambar Artikel:</label>
+            <input type="file" id="gambar" ref="fileInput" @change="handleFileUpload" accept="image/*" />
+            <small class="file-info">Format: JPG, PNG, GIF. Maksimal 2MB</small>
+          </div>
+
+          <!-- Preview Gambar -->
+          <div v-if="imagePreview" class="image-preview">
+            <img :src="imagePreview" alt="Preview" />
+            <button type="button" @click="removeImage" class="remove-image">×</button>
+          </div>
+
+          <!-- Gambar Existing (saat edit) -->
+          <div v-if="formData.gambar && !imagePreview" class="existing-image">
+            <label>Gambar Saat Ini:</label>
+            <img :src="'http://localhost:8080/gambar/' + formData.gambar" alt="Current Image" />
+            <button type="button" @click="removeExistingImage" class="remove-image">Hapus Gambar</button>
+          </div>
+
+          <div>
+            <select v-model="formData.status">
+              <option v-for="option in statusOptions" :value="option.value">{{ option.text }}</option>
+            </select>
+          </div>
+          <input type="hidden" v-model="formData.id" />
+          <button id="btnSimpan" type="submit" :disabled="isUploading">
+            {{ isUploading ? 'Menyimpan...' : 'Simpan' }}
+          </button>
+          <button type="button" @click="closeModal">Batal</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal Kategori -->
+    <div class="modal" v-if="showKategoriForm">
+      <div class="modal-content">
+        <span class="close" @click="closeKategoriModal">&times;</span>
+        <form @submit.prevent="saveKategori">
+          <h3>Tambah Kategori Baru</h3>
+          <div class="form-group">
+            <label for="nama_kategori">Nama Kategori:</label>
+            <input type="text" v-model="kategoriFormData.nama_kategori" id="nama_kategori" placeholder="Masukkan nama kategori" required />
+          </div>
+          <button type="submit" class="btn-save">Simpan Kategori</button>
+          <button type="button" @click="closeKategoriModal">Batal</button>
+        </form>
+
+        <!-- Daftar Kategori yang Ada -->
+        <div class="existing-categories" v-if="kategori.length > 0">
+          <h4>Kategori yang Ada:</h4>
+          <div class="kategori-list">
+            <div v-for="kat in kategori" :key="kat.id_kategori" class="kategori-item">
+              <span class="kategori-name">{{ kat.nama_kategori }}</span>
+              <button type="button" @click="deleteKategori(kat.id_kategori, kat.nama_kategori)" class="btn-delete">
+                🗑️ Hapus
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabel Artikel dengan Scroll -->
+    <div v-if="!isLoading && !errorMessage" class="table-container">
+      <div v-if="artikel.length === 0" class="no-data">
+        <p>📝 Belum ada artikel. Klik "Tambah Data" untuk menambah artikel pertama.</p>
+      </div>
+      <table v-else>
+        <thead>
+          <tr>
+            <th>No</th>
+            <th>Gambar</th>
+            <th>Judul</th>
+            <th>Kategori</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="(row, index) in artikel" :key="row.id">
+            <td class="center-text">{{ index + 1 }}</td>
+            <td class="center-text">
+              <img v-if="row.gambar"
+                   :src="'http://localhost:8080/gambar/' + row.gambar"
+                   alt="Gambar Artikel"
+                   class="table-image" />
+              <span v-else class="no-image">No Image</span>
+            </td>
+            <td>{{ row.judul }}</td>
+            <td>{{ row.nama_kategori || getNamaKategori(row.id_kategori) }}</td>
+            <td>{{ statusText(row.status) }}</td>
+            <td class="center-text">
+              <a href="#" @click.prevent="edit(row)">Edit</a>
+              <a href="#" @click.prevent="hapus(index, row.id)">Hapus</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Hubungkan dengan Vue App -->
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

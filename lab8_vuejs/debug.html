@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug API Connection</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-box { border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { background: #d4edda; border-color: #c3e6cb; }
+        .error { background: #f8d7da; border-color: #f5c6cb; }
+        .info { background: #d1ecf1; border-color: #bee5eb; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .loading { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug API Connection</h1>
+    
+    <div class="test-box info">
+        <h3>Step 1: Test Basic Server</h3>
+        <button onclick="testBasicServer()">Test Server</button>
+        <div id="server-result"></div>
+    </div>
+
+    <div class="test-box info">
+        <h3>Step 2: Test API Endpoint</h3>
+        <button onclick="testApiEndpoint()">Test API</button>
+        <div id="api-result"></div>
+    </div>
+
+    <div class="test-box info">
+        <h3>Step 3: Test Database</h3>
+        <button onclick="testDatabase()">Test Database</button>
+        <div id="db-result"></div>
+    </div>
+
+    <div class="test-box info">
+        <h3>Step 4: Test Post Endpoint</h3>
+        <button onclick="testPostEndpoint()">Test Post API</button>
+        <div id="post-result"></div>
+    </div>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        const baseUrls = [
+            'http://localhost/ci4/public',
+            'http://127.0.0.1/ci4/public'
+        ];
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showLoading(elementId) {
+            showResult(elementId, '<div class="loading">⏳ Testing...</div>', 'info');
+        }
+
+        async function testBasicServer() {
+            showLoading('server-result');
+            
+            for (const baseUrl of baseUrls) {
+                try {
+                    console.log(`Testing: ${baseUrl}`);
+                    const response = await axios.get(baseUrl, { 
+                        timeout: 5000,
+                        headers: {
+                            'Accept': 'text/html,application/json'
+                        }
+                    });
+                    
+                    showResult('server-result', 
+                        `✅ Server accessible at: ${baseUrl}<br>Status: ${response.status}<br>Response length: ${response.data.length} chars`, 
+                        'success'
+                    );
+                    return baseUrl;
+                } catch (error) {
+                    console.error(`Failed: ${baseUrl}`, error);
+                    showResult('server-result', 
+                        `❌ Server not accessible at: ${baseUrl}<br>Error: ${error.message}`, 
+                        'error'
+                    );
+                }
+            }
+        }
+
+        async function testApiEndpoint() {
+            showLoading('api-result');
+            
+            for (const baseUrl of baseUrls) {
+                try {
+                    const response = await axios.get(`${baseUrl}/test-api`, { 
+                        timeout: 5000,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    showResult('api-result', 
+                        `✅ API endpoint working at: ${baseUrl}/test-api<br>` +
+                        `Status: ${response.status}<br>` +
+                        `Response: <pre>${JSON.stringify(response.data, null, 2)}</pre>`, 
+                        'success'
+                    );
+                    return baseUrl;
+                } catch (error) {
+                    console.error(`API test failed: ${baseUrl}`, error);
+                    showResult('api-result', 
+                        `❌ API endpoint failed at: ${baseUrl}/test-api<br>` +
+                        `Error: ${error.message}<br>` +
+                        `${error.response ? `Status: ${error.response.status}` : 'No response'}`, 
+                        'error'
+                    );
+                }
+            }
+        }
+
+        async function testDatabase() {
+            showLoading('db-result');
+            
+            for (const baseUrl of baseUrls) {
+                try {
+                    const response = await axios.get(`${baseUrl}/test-api/test`, { 
+                        timeout: 5000,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    showResult('db-result', 
+                        `✅ Database connection working!<br>` +
+                        `Response: <pre>${JSON.stringify(response.data, null, 2)}</pre>`, 
+                        'success'
+                    );
+                    return baseUrl;
+                } catch (error) {
+                    console.error(`Database test failed: ${baseUrl}`, error);
+                    showResult('db-result', 
+                        `❌ Database test failed<br>` +
+                        `Error: ${error.message}<br>` +
+                        `${error.response ? `Response: <pre>${JSON.stringify(error.response.data, null, 2)}</pre>` : 'No response'}`, 
+                        'error'
+                    );
+                }
+            }
+        }
+
+        async function testPostEndpoint() {
+            showLoading('post-result');
+            
+            for (const baseUrl of baseUrls) {
+                try {
+                    const response = await axios.get(`${baseUrl}/post`, { 
+                        timeout: 5000,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    showResult('post-result', 
+                        `✅ Post endpoint working!<br>` +
+                        `Status: ${response.status}<br>` +
+                        `Articles found: ${response.data.artikel ? response.data.artikel.length : 0}<br>` +
+                        `Response: <pre>${JSON.stringify(response.data, null, 2)}</pre>`, 
+                        'success'
+                    );
+                    return baseUrl;
+                } catch (error) {
+                    console.error(`Post endpoint failed: ${baseUrl}`, error);
+                    showResult('post-result', 
+                        `❌ Post endpoint failed<br>` +
+                        `Error: ${error.message}<br>` +
+                        `${error.response ? `Status: ${error.response.status}<br>Response: <pre>${JSON.stringify(error.response.data, null, 2)}</pre>` : 'No response'}`, 
+                        'error'
+                    );
+                }
+            }
+        }
+
+        // Auto-run basic test on load
+        window.onload = function() {
+            console.log('Debug page loaded');
+        };
+    </script>
+</body>
+</html>

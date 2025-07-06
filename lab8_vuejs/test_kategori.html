@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Kategori API</title>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Test Kategori API</h1>
+    
+    <div>
+        <h3>Test GET Kategori</h3>
+        <button onclick="testGetKategori()">Get Kategori</button>
+        <div id="getResult"></div>
+    </div>
+    
+    <div>
+        <h3>Test POST Kategori</h3>
+        <input type="text" id="namaKategori" placeholder="Nama Kategori" value="Test Kategori">
+        <button onclick="testPostKategori()">Post Kategori</button>
+        <div id="postResult"></div>
+    </div>
+
+    <script>
+        async function testGetKategori() {
+            try {
+                console.log('Testing GET kategori...');
+                const response = await axios.get('http://localhost:8080/kategori');
+                console.log('GET Response:', response.data);
+                document.getElementById('getResult').innerHTML = '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+            } catch (error) {
+                console.error('GET Error:', error);
+                document.getElementById('getResult').innerHTML = '<div style="color: red;">Error: ' + error.message + '</div>';
+            }
+        }
+
+        async function testPostKategori() {
+            try {
+                const namaKategori = document.getElementById('namaKategori').value;
+                console.log('Testing POST kategori with:', namaKategori);
+                
+                const response = await axios.post('http://localhost:8080/kategori', {
+                    nama_kategori: namaKategori
+                }, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                console.log('POST Response:', response.data);
+                document.getElementById('postResult').innerHTML = '<pre>' + JSON.stringify(response.data, null, 2) + '</pre>';
+                
+                // Refresh GET data
+                testGetKategori();
+                
+            } catch (error) {
+                console.error('POST Error:', error);
+                console.error('Error response:', error.response);
+                document.getElementById('postResult').innerHTML = '<div style="color: red;">Error: ' + error.message + '<br>Response: ' + JSON.stringify(error.response?.data) + '</div>';
+            }
+        }
+
+        // Auto test GET on load
+        window.onload = function() {
+            testGetKategori();
+        };
+    </script>
+</body>
+</html>

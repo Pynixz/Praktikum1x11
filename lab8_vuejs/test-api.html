@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Connection Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .test-result { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .error { background: #f8d7da; border: 1px solid #f5c6cb; color: #721c24; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 API Connection Test</h1>
+    <p>Tool ini membantu mendiagnosis masalah koneksi antara Vue.js frontend dan CodeIgniter 4 backend.</p>
+    
+    <button onclick="testAllConnections()">🧪 Test All Connections</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+    
+    <div id="results"></div>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script>
+        const apiUrls = [
+            'http://localhost/ci4/public',
+            'http://127.0.0.1/ci4/public',
+            'http://localhost:80/ci4/public'
+        ];
+
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        async function testConnection(baseUrl) {
+            addResult(`🔍 Testing connection to: ${baseUrl}`, 'info');
+            
+            try {
+                // Test 1: Basic connectivity
+                const response = await axios.get(baseUrl, { timeout: 5000 });
+                addResult(`✅ Basic connection successful (Status: ${response.status})`, 'success');
+                
+                // Test 2: API endpoint
+                try {
+                    const apiResponse = await axios.get(baseUrl + '/post', { 
+                        timeout: 5000,
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    addResult(`✅ API endpoint /post working (Status: ${apiResponse.status})`, 'success');
+                    addResult(`📊 Response data: <pre>${JSON.stringify(apiResponse.data, null, 2)}</pre>`, 'success');
+                    return true;
+                } catch (apiErr) {
+                    addResult(`❌ API endpoint /post failed: ${apiErr.message}`, 'error');
+                    if (apiErr.response) {
+                        addResult(`📋 Response details: Status ${apiErr.response.status} - ${apiErr.response.statusText}`, 'error');
+                    }
+                    return false;
+                }
+                
+            } catch (err) {
+                addResult(`❌ Basic connection failed: ${err.message}`, 'error');
+                if (err.code === 'ECONNABORTED') {
+                    addResult(`⏰ Connection timeout - server might not be running`, 'error');
+                } else if (err.response) {
+                    addResult(`📋 Response details: Status ${err.response.status} - ${err.response.statusText}`, 'error');
+                } else {
+                    addResult(`🔌 Network error - check if server is running`, 'error');
+                }
+                return false;
+            }
+        }
+
+        async function testAllConnections() {
+            clearResults();
+            addResult(`🚀 Starting API connection tests...`, 'info');
+            
+            let successCount = 0;
+            
+            for (const url of apiUrls) {
+                const success = await testConnection(url);
+                if (success) successCount++;
+                addResult(`<hr>`, 'info');
+            }
+            
+            if (successCount > 0) {
+                addResult(`🎉 ${successCount} out of ${apiUrls.length} connections successful!`, 'success');
+                addResult(`💡 Your Vue.js app should work now. Try refreshing the main page.`, 'success');
+            } else {
+                addResult(`😞 All connections failed. Please check:`, 'error');
+                addResult(`
+                    <ol>
+                        <li>XAMPP Apache is running</li>
+                        <li>CodeIgniter 4 is accessible at <a href="http://localhost/ci4/public" target="_blank">http://localhost/ci4/public</a></li>
+                        <li>Database 'sukses' exists and is configured</li>
+                        <li>CORS is properly configured</li>
+                        <li>Post controller exists and routes are set up</li>
+                    </ol>
+                `, 'error');
+            }
+        }
+
+        // Auto-run test on page load
+        window.onload = function() {
+            addResult(`🔧 API Connection Test Tool loaded. Click "Test All Connections" to start.`, 'info');
+        };
+    </script>
+</body>
+</html>
